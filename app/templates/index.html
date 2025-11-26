@@ -1,0 +1,422 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Pneumonia Detection{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="jumbotron text-center bg-light p-5 mb-5 rounded-3">
+    <h1 class="display-4">Pneumonia Detection</h1>
+    <p class="lead">An AI-powered system for detecting pneumonia from chest X-ray images</p>
+    <hr class="my-4">
+    <p>Upload a chest X-ray image and our AI will help detect signs of pneumonia.</p>
+    <a class="btn btn-primary btn-lg" href="#predict" role="button">Analyze X-ray</a>
+</section>
+
+<!-- Prediction Section -->
+<section id="predict" class="mb-5">
+    <h2 class="mb-4">Image Classification</h2>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Upload Image</h5>
+                    <form id="uploadForm" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="imageUpload" class="form-label">Select a chest X-ray image (JPG, PNG):</label>
+                            <input class="form-control" type="file" id="imageUpload" accept="image/jpeg,image/png" required>
+                            <div class="form-text">Supported formats: JPG, PNG (max 16MB). Please ensure the X-ray is properly centered and clearly visible.</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Analyze X-ray</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Diagnosis Result</h5>
+                    <div id="imagePreview" class="mb-3 text-center">
+                        <img id="preview" src="" alt="Preview" class="img-fluid d-none rounded" style="max-height: 200px;">
+                        <div id="noPreview" class="text-muted p-4 border rounded">
+                            <i class="fas fa-image fa-3x mb-2"></i>
+                            <p class="mb-0">Your image preview will appear here</p>
+                        </div>
+                    </div>
+                    <div id="predictionResult" class="text-center">
+                        <p class="text-muted">Upload a chest X-ray to get a diagnosis</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Retraining Section -->
+<section id="retrain" class="mb-5">
+    <h2 class="mb-4">Model Retraining</h2>
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Upload New Training Data</h5>
+            <p>Upload new chest X-ray data to improve the model's accuracy. The model will be fine-tuned with the new data while preserving existing knowledge.</p>
+            
+            <form id="retrainForm" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label for="trainingData" class="form-label">Upload new X-ray data (ZIP file with 'Normal' and 'Pneumonia' folders):</label>
+                    <input class="form-control" type="file" id="trainingData" accept=".zip" required>
+                    <div class="form-text">Upload a ZIP file containing labeled images in subdirectories by class</div>
+                </div>
+                <button type="submit" id="retrainBtn" class="btn btn-warning">
+                    <span class="spinner-border spinner-border-sm d-none" id="retrainSpinner" role="status" aria-hidden="true"></span>
+                    Retrain Model
+                </button>
+                <div id="retrainStatus" class="mt-2"></div>
+            </form>
+        </div>
+    </div>
+</section>
+
+<!-- Metrics Section -->
+<section id="metrics" class="mb-5">
+    <h2 class="mb-4">Model Performance</h2>
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Model Metrics</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <tbody>
+                                <tr>
+                                    <th>Last Trained</th>
+                                    <td id="lastTrained">{{ metrics.last_trained or 'Never' }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Accuracy</th>
+                                    <td>
+                                        {% set accuracy_percent = (metrics.accuracy * 100) if metrics.accuracy is not none else 0 %}
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar" 
+                                                 role="progressbar" 
+                                                 data-width="{{ accuracy_percent }}"
+                                                 aria-valuenow="{{ accuracy_percent }}" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100">
+                                                {{ "%.2f"|format(accuracy_percent) }}%
+                                            </div>
+                                        </div>
+                                        <script>
+                                            // Set the width of the progress bar using JavaScript
+                                            document.addEventListener('DOMContentLoaded', function() {
+                                                const progressBar = document.querySelector('.progress-bar[data-width]');
+                                                if (progressBar) {
+                                                    progressBar.style.width = progressBar.getAttribute('data-width') + '%';
+                                                }
+                                            });
+                                        </script>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Precision</th>
+                                    <td>{{ "%.4f"|format(metrics.precision) if metrics.precision else 'N/A' }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Recall</th>
+                                    <td>{{ "%.4f"|format(metrics.recall) if metrics.recall else 'N/A' }}</td>
+                                </tr>
+                                <tr>
+                                    <th>F1-Score</th>
+                                    <td>{{ "%.4f"|format(metrics.f1_score) if metrics.f1_score else 'N/A' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Class Distribution</h5>
+                    <div id="classDistributionChart" style="height: 300px">
+                        <div class="text-center text-muted p-5">
+                            <i class="fas fa-chart-pie fa-3x mb-3"></i>
+                            <p>Class distribution chart will appear here</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Model Training History</h5>
+            <div id="trainingHistoryChart" style="height: 300px">
+                <div class="text-center text-muted p-5">
+                    <i class="fas fa-chart-line fa-3x mb-3"></i>
+                    <p>Training history chart will appear here</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- About Section -->
+<section class="mb-5">
+    <div class="card">
+        <div class="card-body">
+            <h2 class="card-title">About This Project</h2>
+            <p class="card-text">
+                This Pneumonia Detection system uses deep learning to analyze chest X-ray images and assist medical professionals 
+                in detecting potential cases of pneumonia. It's designed to support healthcare providers in making faster and more 
+                accurate diagnoses.
+            </p>
+            <h5>Detection Capabilities:</h5>
+            <ul>
+                <li><strong>Normal</strong>: No signs of pneumonia detected</li>
+                <li><strong>Pneumonia</strong>: Indications of pneumonia detected</li>
+            </ul>
+            <div class="alert alert-warning" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Important:</strong> This tool is intended to assist healthcare professionals and should not be used as a sole diagnostic tool. 
+                Always consult with a qualified medical professional for diagnosis and treatment.
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Image Preview
+const imageUpload = document.getElementById('imageUpload');
+const preview = document.getElementById('preview');
+const noPreview = document.getElementById('noPreview');
+const uploadForm = document.getElementById('uploadForm');
+const predictionResult = document.getElementById('predictionResult');
+const predictedClass = document.getElementById('predictedClass');
+const confidenceBar = document.getElementById('confidenceBar');
+const confidenceValue = document.getElementById('confidenceValue');
+
+imageUpload.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            preview.src = event.target.result;
+            preview.classList.remove('d-none');
+            noPreview.classList.add('d-none');
+        }
+        reader.readAsDataURL(file);
+    } else {
+        preview.src = '';
+        preview.classList.add('d-none');
+        noPreview.classList.remove('d-none');
+    }
+    predictionResult.classList.add('d-none');
+});
+
+// Form Submission
+uploadForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const file = imageUpload.files[0];
+    if (!file) return;
+    
+    // Show loading state
+    const submitBtn = uploadForm.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Analyzing...';
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+        const response = await fetch('/predict', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            throw new Error('Analysis failed. Please ensure you uploaded a valid chest X-ray image.');
+        }
+        
+        const result = await response.json();
+        
+        // Update UI with diagnosis results
+        const isPneumonia = result.class.toLowerCase() === 'pneumonia';
+        const confidence = Math.round(result.confidence * 100);
+        
+        // Create result HTML based on diagnosis
+        let resultHTML = `
+            <div class="card ${isPneumonia ? 'border-danger' : 'border-success'}">
+                <div class="card-header bg-${isPneumonia ? 'danger' : 'success'} text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-${isPneumonia ? 'exclamation-triangle' : 'check-circle'} me-2"></i>
+                        ${isPneumonia ? 'Pneumonia Detected' : 'No Pneumonia Detected'}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Confidence Level:</span>
+                            <span>${confidence}%</span>
+                        </div>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar bg-${isPneumonia ? 'danger' : 'success'}" 
+                                 role="progressbar" 
+                                 style="width: ${confidence}%" 
+                                 aria-valuenow="${confidence}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                            </div>
+                        </div>
+                    </div>
+                    ${isPneumonia ? 
+                        '<div class="alert alert-warning">' +
+                        '   <i class="fas fa-exclamation-triangle me-2"></i>' +
+                        '   <strong>Note:</strong> This is an AI-assisted diagnosis. Please consult a healthcare professional for a complete evaluation.' +
+                        '</div>' : 
+                        ''
+                    }
+                </div>
+            </div>
+        `;
+        
+        predictionResult.innerHTML = resultHTML;
+        predictionResult.classList.remove('d-none');
+        
+    } catch (error) {
+        console.error('Error:', error);
+        predictionResult.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                <strong>Error:</strong> ${error.message || 'Failed to analyze the X-ray. Please try again.'}
+            </div>
+        `;
+        predictionResult.classList.remove('d-none');
+    } finally {
+        // Reset button state
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
+    }
+});
+
+// Retrain Model
+const retrainForm = document.getElementById('retrainForm');
+const retrainBtn = document.getElementById('retrainBtn');
+const retrainSpinner = document.getElementById('retrainSpinner');
+const retrainStatus = document.getElementById('retrainStatus');
+
+retrainForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const file = document.getElementById('trainingData').files[0];
+    if (!file) return;
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+        retrainBtn.disabled = true;
+        retrainSpinner.classList.remove('d-none');
+        
+        // Show more detailed status updates
+        const updateStatus = (message, type = 'info') => {
+            retrainStatus.innerHTML = `
+                <div class="alert alert-${type} mb-2">
+                    <i class="fas fa-${type === 'info' ? 'info-circle' : type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                    ${message}
+                </div>
+            `;
+            // Scroll to the status message
+            retrainStatus.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        };
+        
+        updateStatus('Starting model retraining process...');
+        
+        const response = await fetch('/retrain', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.message || 'Failed to retrain model');
+        }
+        
+        const result = await response.json();
+        
+        // Show success message with metrics
+        updateStatus('Model retraining completed successfully!', 'success');
+        
+        // Show detailed metrics
+        const metrics = result.metrics || {};
+        const metricsHTML = `
+            <div class="card mt-3">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Model Performance After Retraining</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Accuracy</td>
+                                    <td>${(metrics.accuracy * 100).toFixed(2)}%</td>
+                                </tr>
+                                <tr>
+                                    <td>Precision</td>
+                                    <td>${metrics.precision ? metrics.precision.toFixed(4) : 'N/A'}</td>
+                                </tr>
+                                <tr>
+                                    <td>Recall</td>
+                                    <td>${metrics.recall ? metrics.recall.toFixed(4) : 'N/A'}</td>
+                                </tr>
+                                <tr>
+                                    <td>F1-Score</td>
+                                    <td>${metrics.f1_score ? metrics.f1_score.toFixed(4) : 'N/A'}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        The model will now use the updated version for all new predictions.
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        retrainStatus.insertAdjacentHTML('beforeend', metricsHTML);
+        
+        // Automatically update the page after a short delay to show new metrics
+        setTimeout(() => {
+            // Reload the page to update metrics and model version
+            location.reload();
+        }, 5000);
+        
+    } catch (error) {
+        console.error('Error:', error);
+        updateStatus(`<strong>Error:</strong> ${error.message || 'Failed to retrain model. Please check the console for details.'}`, 'danger');
+    } finally {
+        retrainBtn.disabled = false;
+        retrainSpinner.classList.add('d-none');
+    }
+});
+
+// Load metrics on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // In a real implementation, you would fetch the latest metrics from the server
+    // and update the UI accordingly
+    console.log('Page loaded');
+});
+</script>
+{% endblock %}
