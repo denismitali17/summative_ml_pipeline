@@ -5,10 +5,10 @@
 [![Deployed on Render](https://img.shields.io/badge/Render-46E3B7?style=flat&logo=render&logoColor=white)](https://render.com)
 
 ##  Live Demo
-Live demo application link: https://summative-ml-pipeline-g989.onrender.com
+Live demo application link: https://summative-ml-pipeline-g989.onrender.com 
 
 ## Youtube Video
-Youtube demo link: 
+Youtube demo link: https://youtu.be/8HLAVvTxggg 
 
 ##  Project Overview
 The pneumonia detection system uses a deep learning model that analyzes chest X-rays by identifying key visual patterns. It processes images through multiple convolutional layers to detect pneumonia indicators like lung consolidation, air bronchograms, and pleural effusion. The model was trained on thousands of labeled X-rays, learning to distinguish between normal lung tissue and pneumonia-related abnormalities. It outputs a confidence score for its prediction, with the web interface displaying the results along with visual heatmaps highlighting the areas that influenced the decision. The system includes features for continuous improvement, allowing retraining with new data to enhance accuracy over time.
