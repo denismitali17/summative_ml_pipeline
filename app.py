@@ -10,28 +10,24 @@ import threading
 import shutil
 from pathlib import Path
 
-# Import our custom modules
 from src.model import PneumoniaDetector as WildlifeClassifier
 from src.data_loader import DataLoader
 
-# Initialize Flask app
 app = Flask(__name__, template_folder='app/templates')
 app.config['UPLOAD_FOLDER'] = 'data/raw'
 app.config['MODEL_FOLDER'] = 'models'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif'}
 
-# Ensure upload and model folders exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['MODEL_FOLDER'], exist_ok=True)
 
-# Global variables for model and training status
 MODEL = None
 CLASS_NAMES = []
 MODEL_VERSION = None
 IS_TRAINING = False
 TRAINING_STATUS = {
-    'status': 'idle',  # 'idle', 'training', 'completed', 'error'
+    'status': 'idle',  
     'progress': 0,
     'message': '',
     'start_time': None,
@@ -39,7 +35,6 @@ TRAINING_STATUS = {
     'metrics': None
 }
 
-# Model metrics
 model_metrics = {
     'version': None,
     'last_trained': None,
@@ -59,29 +54,28 @@ def load_latest_model():
     """Load the most recent model from the models directory."""
     global MODEL, CLASS_NAMES, MODEL_VERSION, model_metrics
     
-    # Find all model files
+
     model_files = list(Path(app.config['MODEL_FOLDER']).glob('pneumonia_detector_*.pkl'))
     
     if not model_files:
         print("No trained models found. Please train a model first.")
         return False
     
-    # Get the most recent model
+    
     latest_model = max(model_files, key=os.path.getctime)
     
     try:
-        # Load the model
         MODEL = WildlifeClassifier.load(str(latest_model))
         MODEL_VERSION = latest_model.stem.replace('pneumonia_detector_', '')
         
-        # Update model metrics
+        
         model_metrics.update({
             'version': MODEL_VERSION,
             'num_classes': len(MODEL.class_names) if hasattr(MODEL, 'class_names') else 0,
             'class_names': MODEL.class_names if hasattr(MODEL, 'class_names') else []
         })
         
-        # Try to load metrics if they exist
+        
         metrics_file = latest_model.with_name(f"training_metrics_{MODEL_VERSION}.json")
         if metrics_file.exists():
             with open(metrics_file, 'r') as f:
@@ -113,7 +107,7 @@ def train_model_async(data_dir, epochs=10, learning_rate=1e-4):
             'metrics': None
         })
         
-        # Initialize data loader
+        
         data_loader = DataLoader(
             data_dir=data_dir,
             img_size=(224, 224),
@@ -121,16 +115,16 @@ def train_model_async(data_dir, epochs=10, learning_rate=1e-4):
             val_size=0.2
         )
         
-        # Load the data
+        
         X_train, X_val, X_test, y_train, y_val, y_test, class_indices = data_loader.load_data()
         CLASS_NAMES = [k for k in sorted(class_indices, key=class_indices.get)]
         
-        # Flatten the images for Random Forest
+        
         X_train = X_train.reshape(X_train.shape[0], -1)
         X_val = X_val.reshape(X_val.shape[0], -1)
         X_test = X_test.reshape(X_test.shape[0], -1)
         
-        # Initialize the model
+        
         TRAINING_STATUS['message'] = 'Initializing model...'
         MODEL = WildlifeClassifier(
             model_type='random_forest',
@@ -223,7 +217,7 @@ def predict():
             img = Image.open(file.stream).convert('RGB')
             img = img.resize((224, 224))
             img_array = np.array(img) / 255.0
-            img_array = img_array.reshape(1, -1)  # Flatten the image
+            img_array = img_array.reshape(1, -1)  
             
             # Make prediction
             if MODEL is not None:
@@ -258,7 +252,7 @@ def retrain():
             'status': 'busy',
             'message': 'Model is already being trained',
             'training_status': TRAINING_STATUS
-        }), 409  # Conflict status code
+        }), 409  
     
     # Check if training data is provided
     if 'file' not in request.files:

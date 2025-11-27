@@ -1,4 +1,4 @@
-// Main JavaScript for African Wildlife Classifier
+// Main JavaScript for Pneumonia Prediction
 
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize tooltips
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize charts (if Chart.js is included)
     initializeCharts();
 
-    // Add animation to elements with 'animate-on-scroll' class when they come into view
+    // Add animation to elements with 'animate-on-scroll' class
     setupScrollAnimations();
 
     // Initialize file upload previews

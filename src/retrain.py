@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Script to retrain the African Wildlife Classifier with new data.
+Script to retrain the Pneumonia Prediction with new data.
 """
 import os
 import argparse
@@ -13,7 +13,7 @@ from data_loader import DataLoader
 
 def parse_args():
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description='Retrain African Wildlife Classifier')
+    parser = argparse.ArgumentParser(description='Retrain Pneumonia Prediction')
     parser.add_argument('--model_path', type=str, required=True,
                         help='Path to the existing model file (.h5)')
     parser.add_argument('--new_data_dir', type=str, required=True,

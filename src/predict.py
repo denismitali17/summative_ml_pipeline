@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Script to make predictions using the trained African Wildlife Classifier.
+Script to make predictions using the trained Pneumonia Prediction.
 """
 import os
 import argparse
