@@ -25,7 +25,7 @@ for candidate in ['classes', 'classes_', 'label_encoder', 'model', 'feature_impo
                 print('value sample:', getattr(obj, candidate))
             except Exception:
                 pass
-# Try to get classes from common places
+
 classes = None
 if isinstance(obj, dict):
     for k in ['classes', 'classes_', 'label_encoder', 'classes_']:
@@ -36,7 +36,7 @@ if classes is None:
     classes = getattr(obj, 'classes_', None) or getattr(obj, 'classes', None) or getattr(obj, 'label_encoder', None)
 print('Resolved classes:', classes)
 
-# Print model predict_proba availability
+
 clf = None
 if isinstance(obj, dict):
     clf = obj.get('model')

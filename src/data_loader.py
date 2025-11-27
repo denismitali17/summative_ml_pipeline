@@ -40,7 +40,7 @@ class DataLoader:
         images = []
         labels = []
         
-        # Get class names from subdirectories
+        
         self.class_names = sorted([d for d in os.listdir(self.data_dir) 
                                  if os.path.isdir(os.path.join(self.data_dir, d))])
         self.num_classes = len(self.class_names)
@@ -57,7 +57,7 @@ class DataLoader:
             if not os.path.isdir(class_dir):
                 continue
             
-            # Recursively search for image files in class directory
+            
             for root, dirs, files in os.walk(class_dir):
                 for img_name in files:
                     if img_name.lower().endswith(('.png', '.jpg', '.jpeg')):
@@ -109,7 +109,7 @@ class DataLoader:
         img = Image.open(image_path).convert('RGB')
         img = img.resize(self.img_size)
         img_array = np.array(img) / 255.0
-        return img_array.reshape(1, -1)  # Flatten for scikit-learn
+        return img_array.reshape(1, -1)  
 
     def get_class_name(self, class_index):
         """

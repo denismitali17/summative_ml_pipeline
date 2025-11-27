@@ -39,7 +39,7 @@ def main():
     # Parse command line arguments
     args = parse_args()
     
-    # Create output directory if it doesn't exist
+    
     os.makedirs(args.output_dir, exist_ok=True)
     
     # Set random seeds for reproducibility

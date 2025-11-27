@@ -33,7 +33,7 @@ def main():
     # Parse command line arguments
     args = parse_args()
     
-    # Create output directory if it doesn't exist
+    
     os.makedirs(args.output_dir, exist_ok=True)
     
     # Load the existing model
@@ -45,14 +45,14 @@ def main():
     data_loader = DataLoader(
         data_dir=args.new_data_dir,
         img_size=(224, 224),
-        test_size=0.1,  # Use 10% of new data for validation
-        val_size=0.2    # Use 20% of training data for validation
+        test_size=0.1,  
+        val_size=0.2    
     )
     
     # Load the data
     train_gen, val_gen, test_gen, class_indices = data_loader.load_data()
     
-    # Update class names in the model if new classes are detected
+    
     new_class_names = [k for k in sorted(class_indices, key=class_indices.get)]
     if set(new_class_names) != set(model.class_names):
         print("Warning: New classes detected in the training data.")
@@ -78,7 +78,7 @@ def main():
         learning_rate=args.learning_rate
     )
     
-    # Evaluate the model on the test data if available
+    
     if test_gen is not None:
         print("\nEvaluating on test data...")
         metrics = model.evaluate(test_gen)

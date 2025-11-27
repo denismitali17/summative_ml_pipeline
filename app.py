@@ -14,7 +14,6 @@ import joblib
 from src.model import PneumoniaDetector as WildlifeClassifier
 from src.data_loader import DataLoader
 
-# Feature extraction utilities (same as notebook)
 class FeatureExtractor:
     @staticmethod
     def extract_histogram(image, bins=32):
@@ -66,7 +65,7 @@ class FeatureExtractor:
 app = Flask(__name__, template_folder='app/templates', static_folder='app/static', static_url_path='/static')
 app.config['UPLOAD_FOLDER'] = 'data/raw'
 app.config['MODEL_FOLDER'] = 'models'
-app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB max file size
+app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024 
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif', 'zip'}
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -103,7 +102,7 @@ def allowed_file(filename):
 def load_latest_model():
     """Load the most recent model from the models directory."""
     global MODEL, CLASS_NAMES, MODEL_VERSION, model_metrics
-    # Gather candidate model files (new and legacy)
+    
     candidate_models = []
     model_folder = Path(app.config['MODEL_FOLDER'])
     for p in model_folder.glob('pneumonia_detector_*.pkl'):
@@ -116,15 +115,14 @@ def load_latest_model():
         print("No trained models found. Please train a model first.")
         return False
 
-    # Sort candidates by creation time (newest first)
     candidate_models = sorted(candidate_models, key=os.path.getctime, reverse=True)
 
-    # Try to pick the newest model that has >=2 classes
+    
     selected_model = None
     selected_num_classes = 0
     for candidate in candidate_models:
         try:
-            # For legacy model, inspect joblib contents
+            
             if candidate.name == 'pneumonia_rf_model.pkl':
                 md = joblib.load(str(candidate))
                 classes = md.get('classes') or md.get('classes_') or md.get('label_encoder')
@@ -135,7 +133,7 @@ def load_latest_model():
                 else:
                     num = 0
             else:
-                # For new models, check for class_indices JSON first
+                
                 version = candidate.stem.replace('pneumonia_detector_', '')
                 class_indices_file = candidate.with_name(f"class_indices_{version}.json")
                 if class_indices_file.exists():
@@ -143,7 +141,7 @@ def load_latest_model():
                         ci = json.load(f)
                         num = len(ci.keys())
                 else:
-                    # Fallback: attempt to load the model and check attribute
+                    
                     try:
                         temp_model = WildlifeClassifier.load(str(candidate))
                         cn = getattr(temp_model, 'class_names', None)
@@ -156,10 +154,10 @@ def load_latest_model():
                 selected_num_classes = num
                 break
         except Exception:
-            # If anything fails for this candidate, skip it
+            
             continue
 
-    # If no multi-class model found, fall back to newest model
+    
     if selected_model is None:
         selected_model = candidate_models[0]
         print(f"No multi-class model found; falling back to newest model: {selected_model.name}")
@@ -169,12 +167,12 @@ def load_latest_model():
     latest_model = selected_model
 
     try:
-        # Handle legacy model format
+        
         if latest_model.name == 'pneumonia_rf_model.pkl':
             print(f"Loading legacy model format: {latest_model}")
             model_data = joblib.load(str(latest_model))
             
-            # Create a wrapper to handle the legacy model
+            
             class LegacyModelWrapper:
                 def __init__(self, model_data):
                     self.model = model_data.get('model')
@@ -208,13 +206,13 @@ def load_latest_model():
             MODEL_VERSION = 'legacy_' + datetime.fromtimestamp(os.path.getctime(str(latest_model))).strftime("%Y%m%d_%H%M%S")
             CLASS_NAMES = MODEL.class_names
         else:
-            # Handle new model format — but first check file contents in case a legacy dict
+            
             try:
                 maybe_data = joblib.load(str(latest_model))
             except Exception:
                 maybe_data = None
 
-            # If the loaded artifact looks like the legacy dict, wrap it
+            
             if isinstance(maybe_data, dict) and 'model' in maybe_data:
                 print(f"Detected legacy-format contents in {latest_model.name}, wrapping as legacy model")
                 model_data = maybe_data
@@ -251,12 +249,12 @@ def load_latest_model():
                 MODEL_VERSION = latest_model.stem.replace('pneumonia_detector_', '')
                 CLASS_NAMES = MODEL.class_names
             else:
-                # Normal new-model loading
+                
                 MODEL = WildlifeClassifier.load(str(latest_model))
                 MODEL_VERSION = latest_model.stem.replace('pneumonia_detector_', '')
                 CLASS_NAMES = getattr(MODEL, 'class_names', [])
             if CLASS_NAMES is None or len(CLASS_NAMES) == 0:
-                # Try to load class names from class_indices file
+                
                 class_indices_file = latest_model.with_name(f"class_indices_{MODEL_VERSION}.json")
                 if class_indices_file.exists():
                     try:
@@ -268,14 +266,14 @@ def load_latest_model():
                         print(f"Error loading class_indices: {e}")
                         CLASS_NAMES = []
                 else:
-                    # Fallback to default classes
+                    
                     CLASS_NAMES = []
         
-        # Update model metrics - ensure CLASS_NAMES is a list
+        
         if CLASS_NAMES is None:
             CLASS_NAMES = []
 
-        # Normalize class name capitalization for display (e.g., 'NORMAL' -> 'Normal')
+        
         try:
             CLASS_NAMES = [str(x).capitalize() for x in CLASS_NAMES]
         except Exception:
@@ -287,7 +285,7 @@ def load_latest_model():
             'class_names': CLASS_NAMES
         })
         
-        # Try to load metrics file if it exists
+        
         metrics_file = latest_model.with_name(f"training_metrics_{MODEL_VERSION}.json")
         if metrics_file.exists():
             with open(metrics_file, 'r') as f:
@@ -335,7 +333,7 @@ def train_model_async(data_dir, epochs=10, learning_rate=1e-4):
         X_train, X_val, X_test, y_train, y_val, y_test, class_indices = data_loader.load_data()
         print(f"[DEBUG] Data loaded - X_train shape: {X_train.shape}, class_indices: {class_indices}")
         
-        # Extract class names from class_indices
+        
         class_names_list = [k for k in sorted(class_indices, key=class_indices.get)]
         print(f"[DEBUG] Class names: {class_names_list}")
         
@@ -356,7 +354,7 @@ def train_model_async(data_dir, epochs=10, learning_rate=1e-4):
             n_estimators=100
         )
         
-        # Set class names on the model
+        
         MODEL.class_names = class_names_list
         
         TRAINING_STATUS['progress'] = 50
@@ -371,7 +369,7 @@ def train_model_async(data_dir, epochs=10, learning_rate=1e-4):
         metrics = MODEL.evaluate(X_test, y_test)
         print(f"[DEBUG] Metrics: {metrics}")
         
-        # Save the model
+        
         TRAINING_STATUS['progress'] = 85
         TRAINING_STATUS['message'] = 'Saving model...'
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -379,13 +377,13 @@ def train_model_async(data_dir, epochs=10, learning_rate=1e-4):
         print(f"[DEBUG] Saving model to {model_path}")
         MODEL.save(model_path)
         
-        # Save class indices
+        
         class_indices_path = os.path.join(app.config['MODEL_FOLDER'], f"class_indices_{timestamp}.json")
         with open(class_indices_path, 'w') as f:
             json.dump(class_indices, f)
         print(f"[DEBUG] Class indices saved")
         
-        # Save metrics
+        
         metrics_path = os.path.join(app.config['MODEL_FOLDER'], f"training_metrics_{timestamp}.json")
         with open(metrics_path, 'w') as f:
             json.dump({
@@ -396,7 +394,7 @@ def train_model_async(data_dir, epochs=10, learning_rate=1e-4):
             }, f)
         print(f"[DEBUG] Metrics saved")
         
-        # Update model metrics
+        
         model_metrics.update({
             'version': timestamp,
             'last_trained': datetime.now().isoformat(),
@@ -408,7 +406,7 @@ def train_model_async(data_dir, epochs=10, learning_rate=1e-4):
             'class_names': class_names_list
         })
         
-        # Update global CLASS_NAMES
+        
         CLASS_NAMES = class_names_list
         
         TRAINING_STATUS.update({
@@ -433,14 +431,14 @@ def train_model_async(data_dir, epochs=10, learning_rate=1e-4):
         IS_TRAINING = False
         print(f"[DEBUG] Training thread finished")
 
-# Load the latest model on startup
+
 load_latest_model()
 
-# Routes
+
 @app.route('/')
 def index():
     """Render the main page."""
-    # Ensure CLASS_NAMES is not None
+    
     class_names = CLASS_NAMES if CLASS_NAMES is not None else []
     return render_template('index.html', 
                          classes=class_names,
@@ -471,15 +469,15 @@ def predict():
     if file and allowed_file(file.filename):
         try:
             print(f"[DEBUG] Processing file: {file.filename}")
-            # Read the image - use RGB like in training
+            
             img = Image.open(file.stream).convert('RGB')
             print(f"[DEBUG] Image opened, size: {img.size}")
             
-            # Resize to 224x224 like in training
+            
             img = img.resize((224, 224))
 
-            # Prepare two candidate feature vectors:
-            # 1) Grayscale feature vector from FeatureExtractor (used by older pipeline)
+            
+            
             gray_img = img.convert('L')
             try:
                 gray_feats = FeatureExtractor.extract_all_features_from_image(gray_img, target_size=(224, 224))
@@ -489,7 +487,7 @@ def predict():
                 print(f"[DEBUG] Error extracting grayscale features: {e}")
                 gray_feats = None
 
-            # 2) RGB flattened features (used by other trainings)
+            
             try:
                 rgb_array = np.array(img) / 255.0
                 rgb_feats = rgb_array.reshape(1, -1)
@@ -498,7 +496,7 @@ def predict():
                 print(f"[DEBUG] Error extracting RGB features: {e}")
                 rgb_feats = None
 
-            # Determine expected number of features from the loaded model (if available)
+            
             expected_features = None
             if MODEL is not None:
                 if hasattr(MODEL, 'model') and hasattr(MODEL.model, 'n_features_in_'):
@@ -507,7 +505,7 @@ def predict():
                     expected_features = getattr(MODEL, 'n_features_in_', None)
             print(f"[DEBUG] Model expected features: {expected_features}")
 
-            # Choose which feature vector to use
+            
             chosen = None
             if expected_features is not None:
                 if gray_feats is not None and gray_feats.shape[1] == expected_features:
@@ -517,7 +515,7 @@ def predict():
                     chosen = rgb_feats
                     print("[DEBUG] Using RGB flattened features for prediction (matched expected size)")
             else:
-                # No expected_features info — prefer grayscale extraction first
+                
                 if gray_feats is not None:
                     chosen = gray_feats
                     print("[DEBUG] No expected size; trying grayscale features first")
@@ -525,11 +523,11 @@ def predict():
                     chosen = rgb_feats
                     print("[DEBUG] No expected size; falling back to RGB flattened features")
 
-            # If still None, try to set chosen to whichever is available
+        
             if chosen is None:
                 chosen = gray_feats if gray_feats is not None else rgb_feats
 
-            # Make prediction
+           
             if MODEL is not None and chosen is not None:
                 try:
                     print(f"[DEBUG] Making prediction with features shape: {chosen.shape}")
@@ -590,25 +588,25 @@ def retrain():
             'training_status': TRAINING_STATUS
         }), 409  
     
-    # Check if training data is provided
+    
     if 'file' not in request.files:
         print(f"[DEBUG] No file in request")
         return jsonify({'error': 'No training data provided'}), 400
     
     file = request.files['file']
     print(f"[DEBUG] File received: {file.filename}, size: {len(file.read())} bytes")
-    file.seek(0)  # Reset file pointer
+    file.seek(0)  
     
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
     
-    # Check if it's a zip file
+    
     if not file.filename.lower().endswith('.zip'):
         return jsonify({'error': 'Training data must be a zip file'}), 400
     
     try:
         print(f"[DEBUG] Processing zip file: {file.filename}")
-        # Create a temporary directory for the training data
+        
         import tempfile
         import zipfile
         
@@ -619,17 +617,17 @@ def retrain():
         file.save(zip_path)
         print(f"[DEBUG] Saved zip file to: {zip_path}")
         
-        # Extract the zip file
+        
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(temp_dir)
             print(f"[DEBUG] Extracted zip file")
         
-        # Get parameters from request
+        
         epochs = int(request.form.get('epochs', 10))
         learning_rate = float(request.form.get('learning_rate', 1e-4))
         print(f"[DEBUG] Training parameters - epochs: {epochs}, learning_rate: {learning_rate}")
         
-        # Start training in a separate thread
+        
         IS_TRAINING = True
         thread = threading.Thread(
             target=train_model_async,
@@ -656,7 +654,7 @@ def retrain():
 def status():
     """API endpoint for checking training status."""
     print(f"[DEBUG] Status endpoint called - Training status: {TRAINING_STATUS}")
-    # Ensure CLASS_NAMES is not None
+    
     class_names = CLASS_NAMES if CLASS_NAMES is not None else []
     return jsonify({
         'model_status': {
@@ -672,22 +670,22 @@ def status():
 @app.route('/api/classes')
 def get_classes():
     """API endpoint for getting available classes."""
-    # Ensure CLASS_NAMES is not None
+    
     class_names = CLASS_NAMES if CLASS_NAMES is not None else []
     return jsonify({
         'classes': class_names,
         'count': len(class_names)
     })
 
-# Serve uploaded files
+
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 if __name__ == '__main__':
-    # Create necessary directories
+    
     os.makedirs('data/processed', exist_ok=True)
     os.makedirs('logs', exist_ok=True)
     
-    # Run the app
+    
     app.run(debug=True, host='0.0.0.0', port=5000)

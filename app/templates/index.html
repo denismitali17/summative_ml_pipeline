@@ -105,7 +105,7 @@
                                             </div>
                                         </div>
                                         <script>
-                                            // Set the width of the progress bar using JavaScript
+                                            
                                             document.addEventListener('DOMContentLoaded', function() {
                                                 const progressBar = document.querySelector('.progress-bar[data-width]');
                                                 if (progressBar) {
@@ -323,7 +323,7 @@ retrainForm.addEventListener('submit', async function(e) {
         retrainBtn.disabled = true;
         retrainSpinner.classList.remove('d-none');
         
-        // Show more detailed status updates
+        
         const updateStatus = (message, type = 'info') => {
             retrainStatus.innerHTML = `
                 <div class="alert alert-${type} mb-2">
@@ -373,16 +373,16 @@ retrainForm.addEventListener('submit', async function(e) {
         
         const result = await response.json();
         
-        // Now poll the status endpoint until training is complete
+        
         updateStatus(`Training started... Processing your data. Please wait.`);
         retrainStatus.insertAdjacentHTML('beforeend', displayProgressBar(0));
         
         let trainingComplete = false;
         let pollCount = 0;
-        const maxPollCount = 600; // 10 minutes with 1-second interval, or 20 minutes with 2-second interval
+        const maxPollCount = 600; 
         
         while (!trainingComplete && pollCount < maxPollCount) {
-            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between polls
+            await new Promise(resolve => setTimeout(resolve, 2000)); 
             pollCount++;
             
             try {
@@ -419,7 +419,7 @@ retrainForm.addEventListener('submit', async function(e) {
                     // Update status to success
                     updateStatus('✓ Model retraining completed successfully!', 'success');
                     
-                    // Remove progress bar and show metrics
+                    
                     const progressElement = retrainStatus.querySelector('.progress');
                     if (progressElement) progressElement.remove();
                     
@@ -468,7 +468,7 @@ retrainForm.addEventListener('submit', async function(e) {
                     
                     retrainStatus.insertAdjacentHTML('beforeend', metricsHTML);
                     
-                    // Automatically update the page after a short delay
+                    
                     setTimeout(() => {
                         location.reload();
                     }, 3000);
@@ -479,7 +479,7 @@ retrainForm.addEventListener('submit', async function(e) {
                 }
             } catch (error) {
                 console.error('Error polling status:', error);
-                // Continue polling even if there's a temporary error
+                
             }
         }
         
@@ -498,8 +498,8 @@ retrainForm.addEventListener('submit', async function(e) {
 
 // Load metrics on page load
 document.addEventListener('DOMContentLoaded', function() {
-    // In a real implementation, you would fetch the latest metrics from the server
-    // and update the UI accordingly
+    
+    
     console.log('Page loaded');
 });
 </script>
