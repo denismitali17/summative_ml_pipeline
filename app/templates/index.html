@@ -6,9 +6,9 @@
 <!-- Hero Section -->
 <section class="jumbotron text-center bg-light p-5 mb-5 rounded-3">
     <h1 class="display-4">Pneumonia Detection</h1>
-    <p class="lead">An AI-powered system for detecting pneumonia from chest X-ray images</p>
+    <p class="lead">A system for detecting pneumonia from chest X-ray images</p>
     <hr class="my-4">
-    <p>Upload a chest X-ray image and our AI will help detect signs of pneumonia.</p>
+    <p>Upload a chest X-ray image and our system will help detect signs of pneumonia.</p>
     <a class="btn btn-primary btn-lg" href="#predict" role="button">Analyze X-ray</a>
 </section>
 
@@ -233,7 +233,7 @@ uploadForm.addEventListener('submit', async function(e) {
     formData.append('file', file);
     
     try {
-        const response = await fetch('/predict', {
+        const response = await fetch('/api/predict', {
             method: 'POST',
             body: formData
         });
@@ -245,8 +245,9 @@ uploadForm.addEventListener('submit', async function(e) {
         const result = await response.json();
         
         // Update UI with diagnosis results
-        const isPneumonia = result.class.toLowerCase() === 'pneumonia';
-        const confidence = Math.round(result.confidence * 100);
+        const prediction = result.prediction;
+        const isPneumonia = prediction.class.toLowerCase() === 'pneumonia';
+        const confidence = Math.round(prediction.confidence * 100);
         
         // Create result HTML based on diagnosis
         let resultHTML = `
@@ -276,7 +277,7 @@ uploadForm.addEventListener('submit', async function(e) {
                     ${isPneumonia ? 
                         '<div class="alert alert-warning">' +
                         '   <i class="fas fa-exclamation-triangle me-2"></i>' +
-                        '   <strong>Note:</strong> This is an AI-assisted diagnosis. Please consult a healthcare professional for a complete evaluation.' +
+                        '   <strong>Note:</strong> This tool is intended to assist healthcare professionals and should not be used as a sole diagnostic tool. Please consult a healthcare professional for a complete evaluation.' +
                         '</div>' : 
                         ''
                     }
@@ -334,74 +335,157 @@ retrainForm.addEventListener('submit', async function(e) {
             retrainStatus.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         };
         
+        // Show progress bar
+        const displayProgressBar = (progress) => {
+            const progressHTML = `
+                <div class="progress mt-3" style="height: 25px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" 
+                         aria-valuenow="${progress}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100" 
+                         style="width: ${progress}%">
+                        ${progress}%
+                    </div>
+                </div>
+            `;
+            return progressHTML;
+        };
+        
         updateStatus('Starting model retraining process...');
         
-        const response = await fetch('/retrain', {
+        const response = await fetch('/api/retrain', {
             method: 'POST',
             body: formData
         });
         
+        if (response.status === 409) {
+            updateStatus('Training is already in progress. Please wait for it to complete.', 'warning');
+            retrainBtn.disabled = false;
+            retrainSpinner.classList.add('d-none');
+            return;
+        }
+        
         if (!response.ok) {
             const error = await response.json().catch(() => ({}));
-            throw new Error(error.message || 'Failed to retrain model');
+            throw new Error(error.message || error.error || 'Failed to retrain model');
         }
         
         const result = await response.json();
         
-        // Show success message with metrics
-        updateStatus('Model retraining completed successfully!', 'success');
+        // Now poll the status endpoint until training is complete
+        updateStatus(`Training started... Processing your data. Please wait.`);
+        retrainStatus.insertAdjacentHTML('beforeend', displayProgressBar(0));
         
-        // Show detailed metrics
-        const metrics = result.metrics || {};
-        const metricsHTML = `
-            <div class="card mt-3">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">Model Performance After Retraining</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Metric</th>
-                                    <th>Value</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Accuracy</td>
-                                    <td>${(metrics.accuracy * 100).toFixed(2)}%</td>
-                                </tr>
-                                <tr>
-                                    <td>Precision</td>
-                                    <td>${metrics.precision ? metrics.precision.toFixed(4) : 'N/A'}</td>
-                                </tr>
-                                <tr>
-                                    <td>Recall</td>
-                                    <td>${metrics.recall ? metrics.recall.toFixed(4) : 'N/A'}</td>
-                                </tr>
-                                <tr>
-                                    <td>F1-Score</td>
-                                    <td>${metrics.f1_score ? metrics.f1_score.toFixed(4) : 'N/A'}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="alert alert-info mt-3">
-                        <i class="fas fa-info-circle me-2"></i>
-                        The model will now use the updated version for all new predictions.
-                    </div>
-                </div>
-            </div>
-        `;
+        let trainingComplete = false;
+        let pollCount = 0;
+        const maxPollCount = 600; // 10 minutes with 1-second interval, or 20 minutes with 2-second interval
         
-        retrainStatus.insertAdjacentHTML('beforeend', metricsHTML);
+        while (!trainingComplete && pollCount < maxPollCount) {
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between polls
+            pollCount++;
+            
+            try {
+                const statusResponse = await fetch('/api/status');
+                const statusData = await statusResponse.json();
+                const trainingStatus = statusData.training_status || {};
+                
+                // Update progress bar
+                const progress = trainingStatus.progress || 0;
+                const progressBar = retrainStatus.querySelector('.progress-bar');
+                if (progressBar) {
+                    progressBar.style.width = `${progress}%`;
+                    progressBar.setAttribute('aria-valuenow', progress);
+                    progressBar.textContent = `${progress}%`;
+                }
+                
+                // Update status message
+                const statusMessage = trainingStatus.message || 'Training in progress...';
+                const statusAlert = retrainStatus.querySelector('.alert');
+                if (statusAlert) {
+                    statusAlert.innerHTML = `
+                        <i class="fas fa-spinner fa-spin me-2"></i>
+                        ${statusMessage}
+                    `;
+                }
+                
+                // Check if training is complete
+                if (trainingStatus.status === 'completed') {
+                    trainingComplete = true;
+                    
+                    // Get final metrics
+                    const metrics = statusData.metrics || {};
+                    
+                    // Update status to success
+                    updateStatus('✓ Model retraining completed successfully!', 'success');
+                    
+                    // Remove progress bar and show metrics
+                    const progressElement = retrainStatus.querySelector('.progress');
+                    if (progressElement) progressElement.remove();
+                    
+                    // Show detailed metrics
+                    const metricsHTML = `
+                        <div class="card mt-3">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0">Model Performance After Retraining</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Metric</th>
+                                                <th>Value</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>Accuracy</td>
+                                                <td>${metrics.accuracy !== undefined ? (metrics.accuracy * 100).toFixed(2) + '%' : 'N/A'}</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Precision</td>
+                                                <td>${metrics.precision !== undefined ? metrics.precision.toFixed(4) : 'N/A'}</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Recall</td>
+                                                <td>${metrics.recall !== undefined ? metrics.recall.toFixed(4) : 'N/A'}</td>
+                                            </tr>
+                                            <tr>
+                                                <td>F1-Score</td>
+                                                <td>${metrics.f1_score !== undefined ? metrics.f1_score.toFixed(4) : 'N/A'}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="alert alert-info mt-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    The model will now use the updated version for all new predictions.
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    retrainStatus.insertAdjacentHTML('beforeend', metricsHTML);
+                    
+                    // Automatically update the page after a short delay
+                    setTimeout(() => {
+                        location.reload();
+                    }, 3000);
+                } else if (trainingStatus.status === 'error') {
+                    trainingComplete = true;
+                    const errorMessage = trainingStatus.message || 'Unknown error occurred during training';
+                    updateStatus(`Error: ${errorMessage}`, 'danger');
+                }
+            } catch (error) {
+                console.error('Error polling status:', error);
+                // Continue polling even if there's a temporary error
+            }
+        }
         
-        // Automatically update the page after a short delay to show new metrics
-        setTimeout(() => {
-            // Reload the page to update metrics and model version
-            location.reload();
-        }, 5000);
+        if (!trainingComplete) {
+            updateStatus('Training timed out. Please check the server logs.', 'danger');
+        }
         
     } catch (error) {
         console.error('Error:', error);

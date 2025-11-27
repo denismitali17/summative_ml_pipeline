@@ -56,18 +56,20 @@ class DataLoader:
             class_dir = os.path.join(self.data_dir, class_name)
             if not os.path.isdir(class_dir):
                 continue
-                
-            for img_name in os.listdir(class_dir):
-                if img_name.lower().endswith(('.png', '.jpg', '.jpeg')):
-                    img_path = os.path.join(class_dir, img_name)
-                    try:
-                        img = Image.open(img_path).convert('RGB')
-                        img = img.resize(self.img_size)
-                        img_array = np.array(img) / 255.0
-                        images.append(img_array)
-                        labels.append(class_name)
-                    except Exception as e:
-                        print(f"Error loading {img_path}: {e}")
+            
+            # Recursively search for image files in class directory
+            for root, dirs, files in os.walk(class_dir):
+                for img_name in files:
+                    if img_name.lower().endswith(('.png', '.jpg', '.jpeg')):
+                        img_path = os.path.join(root, img_name)
+                        try:
+                            img = Image.open(img_path).convert('RGB')
+                            img = img.resize(self.img_size)
+                            img_array = np.array(img) / 255.0
+                            images.append(img_array)
+                            labels.append(class_name)
+                        except Exception as e:
+                            print(f"Error loading {img_path}: {e}")
         
         if not images:
             raise ValueError(f"No valid images found in {self.data_dir}")
