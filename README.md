@@ -5,10 +5,13 @@
 [![Deployed on Render](https://img.shields.io/badge/Render-46E3B7?style=flat&logo=render&logoColor=white)](https://render.com)
 
 ##  Live Demo
-Access the live application: [Pneumonia detection](https://summative-ml-pipeline-g989.onrender.com/)
+Live demo application link: https://summative-ml-pipeline-g989.onrender.com
+
+## Youtube Video
+Youtube demo link: 
 
 ##  Project Overview
-An end-to-end machine learning pipeline for detecting pneumonia from chest X-ray images, featuring model training, evaluation, and a web interface for predictions and model retraining.
+The pneumonia detection system uses a deep learning model that analyzes chest X-rays by identifying key visual patterns. It processes images through multiple convolutional layers to detect pneumonia indicators like lung consolidation, air bronchograms, and pleural effusion. The model was trained on thousands of labeled X-rays, learning to distinguish between normal lung tissue and pneumonia-related abnormalities. It outputs a confidence score for its prediction, with the web interface displaying the results along with visual heatmaps highlighting the areas that influenced the decision. The system includes features for continuous improvement, allowing retraining with new data to enhance accuracy over time.
 
 ##  Features
 - Real-time X-ray analysis
@@ -62,31 +65,6 @@ python app.py
 - `POST /api/retrain` - Retrain model with new data
 - `GET /api/status` - Check model status
 - `GET /api/classes` - Get available classes
-
-##  Deployment on Render
-
-### 1. Create a new Web Service
-1. Go to [Render Dashboard](https://dashboard.render.com/)
-2. Click "New" → "Web Service"
-3. Connect your GitHub repository
-
-### 2. Configure Web Service
-- **Name**: pneumonia-detection
-- **Region**: Choose closest to your users
-- **Branch**: main
-- **Build Command**: `pip install -r requirements.txt`
-- **Start Command**: `gunicorn app:app`
-
-### 3. Environment Variables
-Add these environment variables:
-```
-PYTHON_VERSION=3.9.16
-FLASK_ENV=production
-SECRET_KEY=your-secret-key-here
-```
-
-### 4. Deploy
-Click "Create Web Service" to deploy
 
 ##  Usage
 
@@ -144,6 +122,18 @@ summative_ml_pipeline/
 └── README.md
 ```
 
+##  Model Performance on Locust
+The application demonstrates excellent scalability and reliability, making it suitable for production use. The zero failure rate indicates robust error handling, and the response times are well within acceptable limits for a medical imaging application.
+
+<img width="889" height="387" alt="image" src="https://github.com/user-attachments/assets/c22e8255-c088-42e0-bae2-6884aa356e3e" />
+
+
+<img width="731" height="391" alt="image" src="https://github.com/user-attachments/assets/9fde8699-b9ad-43ac-a1fc-78506f0370e6" />
+
+<img width="892" height="431" alt="image" src="https://github.com/user-attachments/assets/49dbb123-c1f3-45f7-8094-812b5dddfba1" />
+
+
+
 ##  License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
@@ -166,7 +156,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-<div align="center">
-  Made [Denis Mitali] | African Leadership University.
-</div>
-```
+  Made by Denis Mitali | African Leadership University.
