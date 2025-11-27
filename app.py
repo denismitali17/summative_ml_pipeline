@@ -606,32 +606,50 @@ def retrain():
     
     try:
         print(f"[DEBUG] Processing zip file: {file.filename}")
-        
-        import tempfile
+
         import zipfile
-        
-        temp_dir = tempfile.mkdtemp()
-        print(f"[DEBUG] Created temp directory: {temp_dir}")
-        
-        zip_path = os.path.join(temp_dir, file.filename)
+
+        # Persist the uploaded zip into data/raw/retrain_uploads/<timestamp>/
+        timestamp_dir = datetime.now().strftime("%Y%m%d_%H%M%S")
+        uploads_root = os.path.join('data', 'raw', 'retrain_uploads')
+        os.makedirs(uploads_root, exist_ok=True)
+        dest_dir = os.path.join(uploads_root, timestamp_dir)
+        os.makedirs(dest_dir, exist_ok=True)
+
+        safe_name = secure_filename(file.filename)
+        zip_path = os.path.join(dest_dir, safe_name)
         file.save(zip_path)
-        print(f"[DEBUG] Saved zip file to: {zip_path}")
-        
-        
+        print(f"[DEBUG] Saved retrain zip to: {zip_path}")
+
+        # Save metadata about this upload for auditing/reproducibility
+        try:
+            meta = {
+                'original_filename': file.filename,
+                'saved_filename': safe_name,
+                'saved_path': zip_path,
+                'timestamp': datetime.now().isoformat(),
+                'size_bytes': os.path.getsize(zip_path),
+                'uploader_ip': request.remote_addr
+            }
+            with open(os.path.join(dest_dir, 'metadata.json'), 'w') as mf:
+                json.dump(meta, mf)
+            print(f"[DEBUG] Wrote metadata to {os.path.join(dest_dir, 'metadata.json')}")
+        except Exception as e:
+            print(f"[WARN] Could not write metadata: {e}")
+
+        # Extract into the destination directory
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(temp_dir)
-            print(f"[DEBUG] Extracted zip file")
-        
-        
+            zip_ref.extractall(dest_dir)
+            print(f"[DEBUG] Extracted zip file to {dest_dir}")
+
         epochs = int(request.form.get('epochs', 10))
         learning_rate = float(request.form.get('learning_rate', 1e-4))
         print(f"[DEBUG] Training parameters - epochs: {epochs}, learning_rate: {learning_rate}")
-        
-        
+
         IS_TRAINING = True
         thread = threading.Thread(
             target=train_model_async,
-            args=(temp_dir, epochs, learning_rate)
+            args=(dest_dir, epochs, learning_rate)
         )
         thread.daemon = True
         thread.start()

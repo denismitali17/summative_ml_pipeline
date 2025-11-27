@@ -1,0 +1,11 @@
+Load test summary
+Generated: 2025-11-27T17:08:18.841105
+
+requests: 100
+successes: 100
+failures: 0
+total_time_s: 15.2962327003479
+throughput_rps: 6.537557446921266
+p50_ms: 1592.0262336730957
+p95_ms: 2136.0936284065247
+avg_ms: 1652.1218633651733
