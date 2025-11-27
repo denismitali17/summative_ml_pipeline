@@ -93,6 +93,23 @@ pip install locust
 locust -f locustfile.py
 ```
 
+## Model Tests
+
+**Image 1:** Noticeable opacity in the right lung. Accurately highlights the pneumonia-affected region.
+
+<img width="797" height="397" alt="image" src="https://github.com/user-attachments/assets/30d00d79-9d6c-487b-b05d-02a5b1acbb9b" />
+
+**Image 2:** Normal X-ray: Clear lung fields with no abnormal opacities. Correctly identifies as normal with 96% confidence.
+
+<img width="806" height="340" alt="image" src="https://github.com/user-attachments/assets/d5b56169-1158-4538-8dd0-6dc915ad7466" />
+
+**Image 3:** Uploading New Data to retrain the model.
+
+<img width="811" height="307" alt="image" src="https://github.com/user-attachments/assets/41334d79-9097-4fbd-b2e5-f5af1d151b74" /> 
+
+
+
+
 ### Load Test Results
 | Users | Avg Response Time | Requests/sec | Failures |
 |-------|-------------------|--------------|----------|
