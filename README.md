@@ -28,6 +28,9 @@ The pneumonia detection system uses a deep learning model that analyzes chest X-
 - **Testing**: Locust
 
 ##  Model Performance
+
+The model's performance suggests it's well-trained and reliable for assisting in pneumonia detection from chest X-rays, though it should still be used as a decision support tool alongside clinical judgment.
+
 | Metric        | Score   |
 |---------------|---------|
 | Accuracy      | 95.75%  |
@@ -105,7 +108,8 @@ locust -f locustfile.py
 
 **Image 3:** Uploading New Data to retrain the model.
 
-<img width="811" height="307" alt="image" src="https://github.com/user-attachments/assets/41334d79-9097-4fbd-b2e5-f5af1d151b74" /> 
+<img width="801" height="290" alt="image" src="https://github.com/user-attachments/assets/41e7b863-6f32-4fe7-83ee-5fb921f41f62" />
+
 
 
 
